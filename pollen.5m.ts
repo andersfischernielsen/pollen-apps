@@ -1,5 +1,8 @@
 #!/Users/fischer/.bun/bin/bun # Replace with your Bun path
 
+import { homedir } from "os";
+import { join } from "path";
+
 interface FirestoreString {
   stringValue: string;
 }
@@ -90,6 +93,24 @@ const predictionLabels: { [id: string]: string } = {
   "3": "Højt",
 };
 
+const cache = Bun.file(join(homedir(), ".cache/xbar-pollen-cache.json"));
+
+const saveCache = async (data: {
+  pollenText: string;
+  allergensText: string;
+}) => {
+  const stringified = JSON.stringify(data);
+  await cache.write(stringified);
+};
+
+const loadCache = async () => {
+  const exists = await cache.exists();
+  if (!exists) return undefined;
+  const contents: { pollenText: string; allergensText: string } =
+    await cache.json();
+  return contents;
+};
+
 const fetchWithTimeout = async (url: string, ms = 2000): Promise<Response> => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), ms);
@@ -116,21 +137,32 @@ const predictionColor = (pred: string): string => {
 };
 
 const fetchData = async (): Promise<[PollenDocument, AllergensDocument]> => {
-  const [pollenResponse, allergensResponse] = await Promise.all([
-    fetchWithTimeout(
-      "https://www.astma-allergi.dk/umbraco/api/pollenapi/getpollenfeed",
-    ),
-    fetchWithTimeout(
-      "https://www.astma-allergi.dk/umbraco/api/pollenapi/getallergens",
-    ),
-  ]);
-  const pollen: PollenDocument = JSON.parse(
-    JSON.parse(await pollenResponse.text()),
-  );
-  const allergens: AllergensDocument = JSON.parse(
-    JSON.parse(await allergensResponse.text()),
-  );
-  return [pollen, allergens];
+  try {
+    const [pollenResponse, allergensResponse] = await Promise.all([
+      fetchWithTimeout(
+        "https://www.astma-allergi.dk/umbraco/api/pollenapi/getpollenfeed",
+      ),
+      fetchWithTimeout(
+        "https://www.astma-allergi.dk/umbraco/api/pollenapi/getallergens",
+      ),
+    ]);
+    const pollenText = await pollenResponse.text();
+    const allergensText = await allergensResponse.text();
+
+    await saveCache({ pollenText, allergensText });
+
+    const pollen: PollenDocument = JSON.parse(JSON.parse(pollenText));
+    const allergens: AllergensDocument = JSON.parse(JSON.parse(allergensText));
+    return [pollen, allergens];
+  } catch {
+    const cached = await loadCache();
+    if (!cached) throw new Error("API og cache utilgængelig");
+    const { pollenText, allergensText } = cached;
+
+    const pollen: PollenDocument = JSON.parse(JSON.parse(pollenText));
+    const allergens: AllergensDocument = JSON.parse(JSON.parse(allergensText));
+    return [pollen, allergens];
+  }
 };
 
 const buildAllergenInformation = (
@@ -151,12 +183,14 @@ const buildAllergenInformation = (
 const buildAllergens = (
   pollen: PollenDocument,
   information: { [id: string]: AllergenInformation },
-): [ActiveAllergen[], string] => {
+): [ActiveAllergen[], string | undefined] => {
   const feedId = cities[selectedCity];
-  const feedDate = pollen.fields[feedId].mapValue.fields.date.stringValue;
-  const feed = pollen.fields[feedId].mapValue.fields.data.mapValue.fields;
+  if (!feedId) return [[], undefined];
 
-  const active: ActiveAllergen[] = Object.entries(feed)
+  const feedDate = pollen.fields[feedId]?.mapValue.fields.date.stringValue;
+  const feed = pollen.fields[feedId]?.mapValue.fields.data.mapValue.fields;
+
+  const active: ActiveAllergen[] = Object.entries(feed ?? {})
     .map(([id, value]) => {
       const f = value.mapValue.fields;
       return {
@@ -199,7 +233,7 @@ const renderTitle = (active: ActiveAllergen[]): void => {
 
 const renderMeasurements = (
   active: ActiveAllergen[],
-  feedDate: string,
+  feedDate: string | undefined,
 ): void => {
   console.log(`${selectedCity} — ${feedDate} | color=#888888`);
   for (const a of active) {
