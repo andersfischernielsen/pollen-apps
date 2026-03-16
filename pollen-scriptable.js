@@ -1,10 +1,10 @@
-const SELECTED_CITY = "København";
-const CITIES = {
+const selectedCity = "København";
+const cities = {
   København: "48",
   Viborg: "49",
 };
 
-const POLLEN_LEVELS = {
+const pollenLevels = {
   1: [0, 10, 50, 200],
   2: [0, 5, 15, 40],
   4: [0, 10, 50, 80],
@@ -17,7 +17,7 @@ const POLLEN_LEVELS = {
 
 const fm = FileManager.local();
 const cacheDir = fm.documentsDirectory();
-const cachePath = fm.joinPath(cacheDir, "xbar-pollen-cache.json");
+const cachePath = fm.joinPath(cacheDir, "scriptable-pollen-cache.json");
 
 const saveCache = async (data) => {
   fm.writeString(cachePath, JSON.stringify(data));
@@ -82,7 +82,7 @@ const buildAllergenInformation = (allergens) => {
 };
 
 const buildAllergens = (pollen, information) => {
-  const feedId = CITIES[SELECTED_CITY];
+  const feedId = cities[selectedCity];
   if (!feedId) {
     return [[], undefined];
   }
@@ -130,7 +130,7 @@ const getWidgetDimensions = () => {
 };
 
 const severityHex = (id, level) => {
-  const intervals = POLLEN_LEVELS[id];
+  const intervals = pollenLevels[id];
   if (!intervals || level <= 0) return null;
   if (level < intervals[1]) return "#72B743";
   if (level < intervals[2]) return "#FED05D";
@@ -170,7 +170,7 @@ const getOnGradientTextStyle = (baseHex, isZero) => {
 
 const renderWidget = async () => {
   const widget = new ListWidget();
-  const padding = 24;
+  const padding = 16;
   widget.setPadding(padding, padding, padding, padding);
   widget.spacing = 0;
   widget.backgroundColor = Color.dynamic(
@@ -198,46 +198,46 @@ const renderWidget = async () => {
       noneText.font = Font.boldSystemFont(18);
       noneText.textColor = new Color("#72B743");
     } else {
-      const { width: widgetW } = getWidgetDimensions();
+      const { width: widgetWidth } = getWidgetDimensions();
       const maxPerRow = 3;
       const rows = Math.max(1, Math.ceil(gridAllergens.length / maxPerRow));
 
-      const colGap = 8;
-      const rowGap = 8;
-      const gridW = widgetW - padding * 2;
+      const gap = 8;
+      const gridWidth = widgetWidth - padding * 2;
 
-      let idx = 0;
+      let index = 0;
       for (let r = 0; r < rows; r++) {
-        const remaining = gridAllergens.length - idx;
+        const remaining = gridAllergens.length - index;
         if (remaining <= 0) break;
         const itemsInRow = Math.min(maxPerRow, remaining);
 
-        const baseCellW = Math.floor(
-          (gridW - colGap * (itemsInRow - 1)) / itemsInRow,
+        const cellWidth = Math.floor(
+          (gridWidth - gap * (itemsInRow - 1)) / itemsInRow,
         );
-        const remainder =
-          gridW - (baseCellW * itemsInRow + colGap * (itemsInRow - 1));
 
         const rowStack = widget.addStack();
-        rowStack.spacing = colGap;
+        rowStack.spacing = 0;
+        rowStack.addSpacer();
 
         for (let c = 0; c < itemsInRow; c++) {
-          const cellW = baseCellW + (c < remainder ? 1 : 0);
-          const cellPad = Math.max(6, Math.min(12, Math.round(cellW * 0.085)));
+          const cellPadding = Math.max(
+            6,
+            Math.min(12, Math.round(cellWidth * 0.085)),
+          );
 
           const cell = rowStack.addStack();
-          cell.size = new Size(cellW, 0);
+          cell.size = new Size(cellWidth, 0);
           cell.layoutVertically();
           cell.topAlignContent();
-          cell.setPadding(cellPad, cellPad, cellPad, cellPad);
+          cell.setPadding(cellPadding, cellPadding, cellPadding, cellPadding);
           cell.cornerRadius = 12;
 
-          const a = gridAllergens[idx++];
+          const a = gridAllergens[index++];
 
-          const sev = severityHex(a.id, a.level);
-          const isZero = a.level === 0 || !sev;
+          const severity = severityHex(a.id, a.level);
+          const isZero = a.level === 0 || !severity;
 
-          const baseHex = isZero ? "#8E8E93" : sev;
+          const baseHex = isZero ? "#8E8E93" : severity;
           cell.backgroundGradient = makeSeverityGradient(baseHex, isZero);
 
           const { textColor, shadowColor } = getOnGradientTextStyle(
@@ -270,10 +270,16 @@ const renderWidget = async () => {
           count.leftAlignText();
 
           cell.addSpacer();
+
+          if (c < itemsInRow - 1) {
+            rowStack.addSpacer(gap);
+          }
         }
 
+        rowStack.addSpacer();
+
         if (r < rows - 1) {
-          widget.addSpacer(rowGap);
+          widget.addSpacer(gap);
         }
       }
     }
@@ -297,7 +303,7 @@ const renderWidget = async () => {
 
 renderWidget().catch((error) => {
   const widget = new ListWidget();
-  widget.setPadding(24, 24, 24, 24);
+  widget.setPadding(16, 16, 16, 16);
 
   const errorTitle = widget.addText("⚠️ Widget Error");
   errorTitle.font = Font.boldSystemFont(16);
