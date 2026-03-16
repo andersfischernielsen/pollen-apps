@@ -4,7 +4,7 @@
 
 A small `xbar` plugin for fetching and displaying allergen/pollen data from [Astma-Allergi Danmark](https://www.astma-allergi.dk/).
 
-## Installation
+## Installation (`xbar`)
 
 1. Install [xbar](https://xbarapp.com/)
 2. Install [bun](https://bun.sh/)
@@ -16,3 +16,10 @@ A small `xbar` plugin for fetching and displaying allergen/pollen data from [Ast
    ```sh
    mv pollen.5m.ts ~/Library/Application\ Support/xbar/plugins/pollen.5m.ts
    ```
+
+## Installation (Scriptable)
+
+1. Install [Scriptable](https://scriptable.app/)
+2. Create a new Widget in Scriptable
+3. Copy the contents of `pollen-scriptable` into the created widget
+4. Add the Widget to the iOS home screen
