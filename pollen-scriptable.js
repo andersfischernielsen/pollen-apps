@@ -137,15 +137,76 @@ const severityHex = (id, level) => {
   return "#C01448";
 };
 
-const makeSeverityGradient = (baseHex, isZero) => {
+const makeCellBackground = (
+  baseHex,
+  isZero,
+  history,
+  cellWidth,
+  cellHeight,
+) => {
   const a1 = isZero ? 0.4 : 1.0;
   const a2 = isZero ? 0.08 : 0.55;
-  const gradient = new LinearGradient();
-  gradient.colors = [new Color(baseHex, a2), new Color(baseHex, a1)];
-  gradient.locations = [0, 1];
-  gradient.startPoint = new Point(0, 0);
-  gradient.endPoint = new Point(0, 1);
-  return gradient;
+
+  const ctx = new DrawContext();
+  ctx.size = new Size(cellWidth, cellHeight);
+  ctx.opaque = false;
+  ctx.respectScreenScale = true;
+
+  for (let y = 0; y < cellHeight; y++) {
+    const t = y / Math.max(cellHeight - 1, 1);
+    ctx.setFillColor(new Color(baseHex, a2 + (a1 - a2) * t));
+    ctx.fill(new Rect(0, y, cellWidth, 1));
+  }
+
+  let trimmed = [];
+  if (history && history.length > 0) {
+    let startIndex = 0;
+    while (startIndex < history.length && history[startIndex].value === 0) {
+      startIndex++;
+    }
+    trimmed = history.slice(startIndex);
+  }
+
+  if (trimmed.length >= 2) {
+    const maxVal = Math.max(...trimmed.map((d) => d.value), 1);
+    const maxX = Math.max(...trimmed.map((d) => d.x), 1);
+    const chartWidth = Math.floor(cellWidth * 0.65);
+    const chartX = cellWidth - chartWidth;
+
+    const isYellow = String(baseHex).toUpperCase() === "#FED05D";
+    const chartColorHex = isYellow ? "#1C1C1E" : "#FFFFFF";
+
+    const chartPadding = 6;
+    const chartDrawWidth = chartWidth - chartPadding * 2;
+    const chartDrawHeight = cellHeight - chartPadding * 2;
+    const baseline = cellHeight - chartPadding;
+    const toX = (x) => chartX + chartPadding + (x / maxX) * chartDrawWidth;
+    const toY = (v) =>
+      chartPadding + chartDrawHeight - (v / maxVal) * chartDrawHeight;
+
+    const fillPath = new Path();
+    fillPath.move(new Point(toX(trimmed[0].x), baseline));
+    for (const p of trimmed) {
+      fillPath.addLine(new Point(toX(p.x), toY(p.value)));
+    }
+    fillPath.addLine(new Point(toX(trimmed[trimmed.length - 1].x), baseline));
+    fillPath.closeSubpath();
+    ctx.addPath(fillPath);
+    ctx.setFillColor(new Color(chartColorHex, 0.2));
+    ctx.fillPath();
+
+    const linePath = new Path();
+    linePath.move(new Point(toX(trimmed[0].x), toY(trimmed[0].value)));
+    for (let i = 1; i < trimmed.length; i++) {
+      linePath.addLine(new Point(toX(trimmed[i].x), toY(trimmed[i].value)));
+    }
+    ctx.addPath(linePath);
+    ctx.setStrokeColor(new Color(chartColorHex, 0.45));
+    ctx.setLineWidth(1.5);
+    ctx.strokePath();
+  }
+
+  return ctx.getImage();
 };
 
 const getOnGradientTextStyle = (baseHex, isZero) => {
@@ -166,6 +227,38 @@ const getOnGradientTextStyle = (baseHex, isZero) => {
       ? new Color("#FFFFFF", 0.2)
       : new Color("#000000", 0.35),
   };
+};
+
+const fetchHistorical = async (stationId, allergenId, year) => {
+  const url = `https://www.astma-allergi.dk/umbraco/api/PollenApi/GetHistoricalData?stationId=${stationId}&allergenId=${allergenId}&year=${year}`;
+  const req = new Request(url);
+  req.timeoutInterval = 5;
+  const text = await req.loadString();
+  const data = JSON.parse(JSON.parse(text));
+  const monthly = data.fields?.monthlyData?.mapValue?.fields || {};
+  const points = [];
+  const daysBefore = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+  for (const monthStr of Object.keys(monthly).sort(
+    (a, b) => parseInt(a) - parseInt(b),
+  )) {
+    const month = parseInt(monthStr);
+    const days = monthly[monthStr].mapValue?.fields || {};
+    for (const dayStr of Object.keys(days).sort(
+      (a, b) => parseInt(a) - parseInt(b),
+    )) {
+      const day = parseInt(dayStr);
+      const dayVal = days[dayStr];
+      let val = dayVal?.integerValue;
+      if (val === undefined) {
+        val = dayVal?.mapValue?.fields?.level?.integerValue;
+      }
+      if (val !== undefined && val !== null) {
+        const doy = daysBefore[month - 1] + day;
+        points.push({ x: doy, value: parseInt(val) });
+      }
+    }
+  }
+  return points;
 };
 
 const renderWidget = async () => {
@@ -193,16 +286,36 @@ const renderWidget = async () => {
 
     const gridAllergens = active.slice(0, 9);
 
+    const stationId = cities[selectedCity];
+    const currentYear = new Date().getFullYear();
+    let historicalData = {};
+    if (stationId) {
+      const histEntries = await Promise.all(
+        gridAllergens.map(async (a) => {
+          try {
+            return [a.id, await fetchHistorical(stationId, a.id, currentYear)];
+          } catch (e) {
+            return [a.id, []];
+          }
+        }),
+      );
+      historicalData = Object.fromEntries(histEntries);
+    }
+
     if (active.length === 0) {
       const noneText = widget.addText("Ingen pollen");
       noneText.font = Font.boldSystemFont(18);
       noneText.textColor = new Color("#72B743");
     } else {
-      const { width: widgetWidth } = getWidgetDimensions();
+      const { width: widgetWidth, height: widgetHeight } =
+        getWidgetDimensions();
       const maxPerRow = 3;
       const rows = Math.max(1, Math.ceil(gridAllergens.length / maxPerRow));
 
       const gap = 8;
+      const cellHeight = Math.floor(
+        (widgetHeight - padding * 2 - 28 - gap * (rows - 1)) / rows,
+      );
       const gridWidth = widgetWidth - padding * 2;
 
       let index = 0;
@@ -226,7 +339,7 @@ const renderWidget = async () => {
           );
 
           const cell = rowStack.addStack();
-          cell.size = new Size(cellWidth, 0);
+          cell.size = new Size(cellWidth, cellHeight);
           cell.layoutVertically();
           cell.topAlignContent();
           cell.setPadding(cellPadding, cellPadding, cellPadding, cellPadding);
@@ -238,7 +351,13 @@ const renderWidget = async () => {
           const isZero = a.level === 0 || !severity;
 
           const baseHex = isZero ? "#8E8E93" : severity;
-          cell.backgroundGradient = makeSeverityGradient(baseHex, isZero);
+          cell.backgroundImage = makeCellBackground(
+            baseHex,
+            isZero,
+            historicalData[a.id] || [],
+            cellWidth,
+            cellHeight,
+          );
 
           const { textColor, shadowColor } = getOnGradientTextStyle(
             baseHex,
