@@ -1,10 +1,10 @@
-# xbar-pollen
+# Pollen
 
-![screenshot](screenshot.png)
+## `xbar`
 
 A small `xbar` plugin for fetching and displaying allergen/pollen data from [Astma-Allergi Danmark](https://www.astma-allergi.dk/).
 
-## Installation (`xbar`)
+![screenshot](screenshot.png)
 
 1. Install [xbar](https://xbarapp.com/)
 2. Install [bun](https://bun.sh/)
@@ -17,7 +17,11 @@ A small `xbar` plugin for fetching and displaying allergen/pollen data from [Ast
    mv pollen.5m.ts ~/Library/Application\ Support/xbar/plugins/pollen.5m.ts
    ```
 
-## Installation (Scriptable)
+## Scriptable
+
+A Scriptable script for fetching and displaying allergen/pollen data from [Astma-Allergi Danmark](https://www.astma-allergi.dk/).
+
+![screenshot2](screenshot2.jpg)
 
 1. Install [Scriptable](https://scriptable.app/)
 2. Create a new Widget in Scriptable
