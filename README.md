@@ -8,7 +8,7 @@ A Scriptable script for fetching and displaying allergen/pollen data from [Astma
 
 1. Install [Scriptable](https://scriptable.app/)
 2. Create a new Widget in Scriptable
-3. Copy the contents of `pollen-scriptable` into the created widget
+3. Copy the contents of `pollen-scriptable.js` into the created widget
 4. Add the Widget to the iOS home screen
 
 ## `xbar`
