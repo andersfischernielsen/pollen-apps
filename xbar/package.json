@@ -1,0 +1,15 @@
+{
+  "name": "scriptable-pollen",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@typescript/native-preview": "^7.0.0-dev.20260511.1"
+  },
+  "peerDependencies": {
+    "typescript": "^6"
+  },
+  "scripts": {
+    "typecheck": "bun run tsgo"
+  },
+  "dependencies": {}
+}

@@ -1,0 +1,31 @@
+name: Typecheck
+
+on:
+  - push
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck-scriptable:
+    name: Typecheck (Scriptable)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+        working-directory: scriptable
+      - run: bun run typecheck
+        working-directory: scriptable
+
+  typecheck-xbar:
+    name: Typecheck (xbar)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+        working-directory: xbar
+      - run: bun run typecheck
+        working-directory: xbar
