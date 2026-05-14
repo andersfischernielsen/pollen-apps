@@ -1,20 +1,23 @@
 // src/constants.ts
 var cities = {
-  København: "48",
+  K\u00F8benhavn: "48",
   Viborg: "49"
 };
-var defaultCity = "København";
+var defaultCity = "K\xF8benhavn";
 
 // src/cache.ts
 var fileManager = FileManager.local();
 var cacheDir = fileManager.documentsDirectory();
-var cachePath = fileManager.joinPath(cacheDir, "scriptable-pollen-cache.json");
+var cachePath = fileManager.joinPath(
+  cacheDir,
+  "scriptable-pollen-cache.json"
+);
 var saveCache = async (data) => {
   fileManager.writeString(cachePath, JSON.stringify(data));
 };
 var loadCache = () => {
   if (!fileManager.fileExists(cachePath)) {
-    return;
+    return void 0;
   }
   const contents = fileManager.readString(cachePath);
   return JSON.parse(contents);
@@ -24,8 +27,12 @@ var loadCache = () => {
 var parseDocument = (text) => JSON.parse(JSON.parse(text));
 var fetchCurrent = async () => {
   try {
-    const pollenReq = new Request("https://www.astma-allergi.dk/umbraco/api/pollenapi/getpollenfeed");
-    const allergensReq = new Request("https://www.astma-allergi.dk/umbraco/api/pollenapi/getallergens");
+    const pollenReq = new Request(
+      "https://www.astma-allergi.dk/umbraco/api/pollenapi/getpollenfeed"
+    );
+    const allergensReq = new Request(
+      "https://www.astma-allergi.dk/umbraco/api/pollenapi/getallergens"
+    );
     pollenReq.timeoutInterval = 2;
     allergensReq.timeoutInterval = 2;
     const [pollenText, allergensText] = await Promise.all([
@@ -46,16 +53,20 @@ var fetchCurrent = async () => {
     return [pollen, allergens];
   }
 };
-var buildAllergenInformation = (allergens) => Object.fromEntries(Object.entries(allergens.fields.allergens.mapValue.fields).map(([id, val]) => {
-  const f = val.mapValue.fields;
-  return [id, { name: f.name.stringValue, latin: f.latin.stringValue }];
-}));
+var buildAllergenInformation = (allergens) => Object.fromEntries(
+  Object.entries(allergens.fields.allergens.mapValue.fields).map(
+    ([id, val]) => {
+      const f = val.mapValue.fields;
+      return [id, { name: f.name.stringValue, latin: f.latin.stringValue }];
+    }
+  )
+);
 var buildAllergens = (stationId, pollen, info) => {
   const cityField = pollen.fields[stationId]?.mapValue.fields;
   if (!cityField)
     return {
       allergens: [],
-      date: undefined
+      date: void 0
     };
   const date = cityField.date.stringValue;
   const feed = cityField.data.mapValue.fields;
@@ -76,8 +87,7 @@ var cumulativeDaysBefore = (year) => {
   const february = isLeapYear(year) ? 29 : 28;
   const lengths = [0, 31, february, 30, 31, 30, 31, 31, 30, 31, 30, 31];
   const cumulative = [0];
-  for (let i = 0;i < 11; i++)
-    cumulative.push(cumulative[i] + lengths[i]);
+  for (let i = 0; i < 11; i++) cumulative.push(cumulative[i] + lengths[i]);
   return cumulative;
 };
 var fetchHistorical = async (stationId, allergenId, year) => {
@@ -95,7 +105,7 @@ var fetchHistorical = async (stationId, allergenId, year) => {
       const day = parseInt(dayStr);
       const offset = daysBefore[month - 1];
       const value = parseInt(dayVal.integerValue);
-      return offset !== undefined ? { x: offset + day, value } : null;
+      return offset !== void 0 ? { x: offset + day, value } : null;
     }).filter((p) => p !== null);
   });
 };
@@ -117,17 +127,14 @@ var getWidgetDimensions = () => {
   }
 };
 var trimLeadingZeros = (data) => {
-  if (data.length === 0)
-    return [];
+  if (data.length === 0) return [];
   let start = 0;
-  while (start < data.length && data[start].value === 0)
-    start++;
+  while (start < data.length && data[start].value === 0) start++;
   return data.slice(start);
 };
 var drawSparkline = (ctx, baseHex, history, cellWidth, cellHeight) => {
   const trimmed = trimLeadingZeros(history);
-  if (trimmed.length < 2)
-    return;
+  if (trimmed.length < 2) return;
   const maxVal = Math.max(...trimmed.map((d) => d.value), 1);
   const maxX = Math.max(...trimmed.map((d) => d.x), 1);
   const chartWidth = Math.floor(cellWidth * 0.65);
@@ -140,7 +147,7 @@ var drawSparkline = (ctx, baseHex, history, cellWidth, cellHeight) => {
   const baseline = cellHeight - chartPadding;
   const toX = (x) => chartX + chartPadding + x / maxX * chartDrawWidth;
   const toY = (v) => chartPadding + chartDrawHeight - v / maxVal * chartDrawHeight;
-  const fillPath = new Path;
+  const fillPath = new Path();
   fillPath.move(new Point(toX(trimmed[0].x), baseline));
   for (const p of trimmed) {
     fillPath.addLine(new Point(toX(p.x), toY(p.value)));
@@ -150,9 +157,9 @@ var drawSparkline = (ctx, baseHex, history, cellWidth, cellHeight) => {
   ctx.addPath(fillPath);
   ctx.setFillColor(new Color(chartColorHex, 0.2));
   ctx.fillPath();
-  const linePath = new Path;
+  const linePath = new Path();
   linePath.move(new Point(toX(trimmed[0].x), toY(trimmed[0].value)));
-  for (let i = 1;i < trimmed.length; i++) {
+  for (let i = 1; i < trimmed.length; i++) {
     linePath.addLine(new Point(toX(trimmed[i].x), toY(trimmed[i].value)));
   }
   ctx.addPath(linePath);
@@ -170,23 +177,23 @@ var pollenSeverities = {
   "28": [0, 10, 50, 150],
   "31": [0, 10, 50, 60],
   "44": [0, 20, 100, 500],
-  "45": [0, 2000, 6000, 7000]
+  "45": [0, 2e3, 6e3, 7e3]
 };
 var severityColor = (id, level) => {
   const intervals = pollenSeverities[id];
-  if (!intervals || level <= 0)
-    return null;
-  if (level < intervals[1])
-    return "#72B743";
-  if (level < intervals[2])
-    return "#FED05D";
+  if (!intervals || level <= 0) return null;
+  if (level < intervals[1]) return "#72B743";
+  if (level < intervals[2]) return "#FED05D";
   return "#C01448";
 };
 var getTextStyle = (baseHex, isZero) => {
   if (isZero) {
     return {
       textColor: Color.dynamic(new Color("#1C1C1E"), new Color("#F2F2F7")),
-      shadowColor: Color.dynamic(new Color("#FFFFFF", 0.2), new Color("#000000", 0.35))
+      shadowColor: Color.dynamic(
+        new Color("#FFFFFF", 0.2),
+        new Color("#000000", 0.35)
+      )
     };
   }
   const isYellow = baseHex.toUpperCase() === "#FED05D";
@@ -198,7 +205,7 @@ var getTextStyle = (baseHex, isZero) => {
 var drawGradientBackground = (ctx, baseHex, isZero, cellWidth, cellHeight) => {
   const a1 = isZero ? 0.4 : 1;
   const a2 = isZero ? 0.08 : 0.55;
-  for (let y = 0;y < cellHeight; y++) {
+  for (let y = 0; y < cellHeight; y++) {
     const t = y / Math.max(cellHeight - 1, 1);
     ctx.setFillColor(new Color(baseHex, a2 + (a1 - a2) * t));
     ctx.fill(new Rect(0, y, cellWidth, 1));
@@ -206,7 +213,10 @@ var drawGradientBackground = (ctx, baseHex, isZero, cellWidth, cellHeight) => {
 };
 
 // src/widget/widget.ts
-var chunk = (arr, size) => Array.from({ length: Math.ceil(arr.length / size) }, (_, i) => arr.slice(i * size, i * size + size));
+var chunk = (arr, size) => Array.from(
+  { length: Math.ceil(arr.length / size) },
+  (_, i) => arr.slice(i * size, i * size + size)
+);
 var buildNameLabel = (cell, name, textColor, shadowColor) => {
   const label = cell.addText(name);
   label.font = Font.semiboldSystemFont(10);
@@ -231,7 +241,7 @@ var buildLevelLabel = (cell, level, textColor, shadowColor, isZero) => {
   label.leftAlignText();
 };
 var buildCellBackground = (baseHex, isZero, history, cellWidth, cellHeight) => {
-  const ctx = new DrawContext;
+  const ctx = new DrawContext();
   ctx.size = new Size(cellWidth, cellHeight);
   ctx.opaque = false;
   ctx.respectScreenScale = true;
@@ -250,7 +260,13 @@ var buildCell = (parent, allergen, history, cellWidth, cellHeight) => {
   const severity = severityColor(allergen.id, allergen.level);
   const isZero = allergen.level === 0 || !severity;
   const baseHex = isZero ? "#8E8E93" : severity;
-  cell.backgroundImage = buildCellBackground(baseHex, isZero, history, cellWidth, cellHeight);
+  cell.backgroundImage = buildCellBackground(
+    baseHex,
+    isZero,
+    history,
+    cellWidth,
+    cellHeight
+  );
   const { textColor, shadowColor } = getTextStyle(baseHex, isZero);
   buildNameLabel(cell, allergen.name, textColor, shadowColor);
   cell.addSpacer(6);
@@ -258,7 +274,9 @@ var buildCell = (parent, allergen, history, cellWidth, cellHeight) => {
   cell.addSpacer();
 };
 var buildRow = (widget, allergens, historicalData, rowWidth, cellHeight, gap) => {
-  const cellWidth = Math.floor((rowWidth - gap * (allergens.length - 1)) / allergens.length);
+  const cellWidth = Math.floor(
+    (rowWidth - gap * (allergens.length - 1)) / allergens.length
+  );
   const rowStack = widget.addStack();
   rowStack.addSpacer();
   for (const [i, a] of allergens.entries()) {
@@ -275,7 +293,9 @@ var buildGrid = (widget, allergens, historicalData) => {
   const gap = 8;
   const maxPerRow = 3;
   const rows = chunk(allergens, maxPerRow);
-  const cellHeight = Math.floor((widgetHeight - padding * 2 - 28 - gap * (rows.length - 1)) / rows.length);
+  const cellHeight = Math.floor(
+    (widgetHeight - padding * 2 - 28 - gap * (rows.length - 1)) / rows.length
+  );
   const gridWidth = widgetWidth - padding * 2;
   for (const [r, row] of rows.entries()) {
     buildRow(widget, row, historicalData, gridWidth, cellHeight, gap);
@@ -286,7 +306,7 @@ var buildGrid = (widget, allergens, historicalData) => {
 };
 var buildError = (widget, error) => {
   const err = error instanceof Error ? error.message : String(error);
-  const errorTitle = widget.addText("⚠️ Fejl");
+  const errorTitle = widget.addText("\u26A0\uFE0F Fejl");
   errorTitle.font = Font.boldSystemFont(16);
   errorTitle.textColor = new Color("#e74c3c");
   widget.addSpacer(4);
@@ -299,11 +319,14 @@ var buildNoneText = (widget) => {
   text.font = Font.boldSystemFont(18);
   text.textColor = new Color("#72B743");
 };
-var buildWidget = async (cityName) => {
-  const widget = new ListWidget;
+var buildWidget = async (cityName2) => {
+  const widget = new ListWidget();
   widget.setPadding(16, 16, 16, 16);
   widget.spacing = 0;
-  widget.backgroundColor = Color.dynamic(new Color("#FFFFFF"), new Color("#111111"));
+  widget.backgroundColor = Color.dynamic(
+    new Color("#FFFFFF"),
+    new Color("#111111")
+  );
   const title = widget.addText("Pollen");
   title.font = Font.boldSystemFont(16);
   title.textColor = Color.dynamic(new Color("#1C1C1E"), new Color("#F2F2F7"));
@@ -312,28 +335,35 @@ var buildWidget = async (cityName) => {
   try {
     const [pollen, allergens] = await fetchCurrent();
     const allergenInfo = buildAllergenInformation(allergens);
-    const stationId = cities[cityName];
-    if (!stationId)
-      throw new Error(`Unknown city: ${cityName}`);
-    const { allergens: active } = buildAllergens(stationId, pollen, allergenInfo);
+    const stationId = cities[cityName2];
+    if (!stationId) throw new Error(`Unknown city: ${cityName2}`);
+    const { allergens: active } = buildAllergens(
+      stationId,
+      pollen,
+      allergenInfo
+    );
     const gridAllergens = active.slice(0, 9);
-    const currentYear = new Date().getFullYear();
-    const historicalData = Object.fromEntries(await Promise.all(gridAllergens.map(async (a) => {
-      try {
-        return [
-          a.id,
-          await fetchHistorical(stationId, a.id, currentYear)
-        ];
-      } catch {
-        return [a.id, []];
-      }
-    })));
+    const currentYear = (/* @__PURE__ */ new Date()).getFullYear();
+    const historicalData = Object.fromEntries(
+      await Promise.all(
+        gridAllergens.map(async (a) => {
+          try {
+            return [
+              a.id,
+              await fetchHistorical(stationId, a.id, currentYear)
+            ];
+          } catch {
+            return [a.id, []];
+          }
+        })
+      )
+    );
     if (active.length === 0) {
       buildNoneText(widget);
     } else {
       buildGrid(widget, gridAllergens, historicalData);
     }
-    widget.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1000);
+    widget.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1e3);
   } catch (error) {
     buildError(widget, error);
   }

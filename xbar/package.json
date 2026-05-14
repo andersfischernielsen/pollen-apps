@@ -1,15 +1,16 @@
 {
-  "name": "scriptable-pollen",
+  "name": "xbar-pollen",
   "private": true,
   "devDependencies": {
-    "@types/bun": "latest",
-    "@typescript/native-preview": "^7.0.0-dev.20260511.1"
+    "@types/node": "^22",
+    "@typescript/native-preview": "^7.0.0-dev.20260511.1",
+    "esbuild": "^0.25"
   },
   "peerDependencies": {
     "typescript": "^6"
   },
   "scripts": {
-    "typecheck": "bun run tsgo"
-  },
-  "dependencies": {}
+    "build": "esbuild pollen.5m.ts --bundle --platform=node --outfile=pollen.5m.js --banner:js=\"#!/usr/bin/env node\" --external:esbuild",
+    "typecheck": "tsgo"
+  }
 }

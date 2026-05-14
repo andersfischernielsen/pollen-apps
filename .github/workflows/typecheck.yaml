@@ -13,10 +13,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "26"
+          cache: "npm"
+          cache-dependency-path: scriptable/package-lock.json
+      - run: npm ci
         working-directory: scriptable
-      - run: bun run typecheck
+      - run: npm run typecheck
         working-directory: scriptable
 
   typecheck-xbar:
@@ -24,8 +28,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "26"
+          cache: "npm"
+          cache-dependency-path: xbar/package-lock.json
+      - run: npm ci
         working-directory: xbar
-      - run: bun run typecheck
+      - run: npm run typecheck
         working-directory: xbar

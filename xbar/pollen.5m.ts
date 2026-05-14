@@ -1,5 +1,3 @@
-#!/Users/fischer/.bun/bin/bun # Replace with your Bun path
-
 import { homedir } from "os";
 import { join } from "path";
 
@@ -93,22 +91,25 @@ const predictionLabels: { [id: string]: string } = {
   "3": "Højt",
 };
 
-const cache = Bun.file(join(homedir(), ".cache/xbar-pollen-cache.json"));
+import { readFile, writeFile, mkdir } from "fs/promises";
+import { existsSync } from "fs";
+
+const cacheDir = join(homedir(), ".cache");
+const cachePath = join(cacheDir, "xbar-pollen-cache.json");
 
 const saveCache = async (data: {
   pollenText: string;
   allergensText: string;
 }) => {
+  await mkdir(cacheDir, { recursive: true });
   const stringified = JSON.stringify(data);
-  await cache.write(stringified);
+  await writeFile(cachePath, stringified, "utf-8");
 };
 
 const loadCache = async () => {
-  const exists = await cache.exists();
-  if (!exists) return undefined;
-  const contents: { pollenText: string; allergensText: string } =
-    await cache.json();
-  return contents;
+  if (!existsSync(cachePath)) return undefined;
+  const content = await readFile(cachePath, "utf-8");
+  return JSON.parse(content) as { pollenText: string; allergensText: string };
 };
 
 const fetchWithTimeout = async (url: string, ms = 2000): Promise<Response> => {

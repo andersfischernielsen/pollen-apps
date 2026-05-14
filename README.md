@@ -1,6 +1,6 @@
 # Pollen
 
-Small utilities to help manage hayfever in Denmark. 
+Small utilities to help manage hayfever in Denmark.
 
 All data is fetched from [Astma-Allergi Danmark](https://www.astma-allergi.dk/).
 
@@ -21,13 +21,24 @@ An `xbar` plugin for fetching and displaying allergen/pollen data on macOS.
 
 ![screenshot](screenshot.png)
 
-1. Install [xbar](https://xbarapp.com/)
-2. Install [bun](https://bun.sh/)
-3. Modify the first line of [`xbar/pollen.5m.ts`](xbar/pollen.5m.ts) to point to your Bun installation
+### Setup
+
+1. Install [Node.js](https://nodejs.org/)
+2. Install [xbar](https://xbarapp.com/)
+3. Place [`xbar/pollen.5m.js`](xbar/pollen.5m.js) in your `xbar` plugins directory
    ```sh
-   #!/Users/$YOUR_USER/.bun/bin/bun # Replace with your Bun path
+   cp xbar/pollen.5m.js ~/Library/Application\ Support/xbar/plugins/pollen.5m.js
    ```
-4. Place `pollen.5m.ts` in your `xbar` plugins directory
+4. Make the file executable
    ```sh
-   cp pollen.5m.ts ~/Library/Application\ Support/xbar/plugins/pollen.5m.ts
+   chmod +x ~/Library/Application\ Support/xbar/plugins/pollen.5m.js
    ```
+
+### Development
+
+```sh
+cd xbar
+npm install
+npm run build   # rebuilds pollen.5m.js from source
+npm run typecheck
+```

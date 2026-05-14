@@ -2,16 +2,17 @@
   "name": "scriptable-pollen",
   "private": true,
   "devDependencies": {
-    "@types/bun": "latest",
+    "@types/node": "^22",
+    "@types/scriptable-ios": "^1.7.9",
     "@typescript/native-preview": "^7.0.0-dev.20260511.1",
-    "@types/scriptable-ios": "^1.7.9"
+    "esbuild": "^0.25"
   },
   "peerDependencies": {
     "typescript": "^6"
   },
   "scripts": {
-    "build": "bun build ./src/pollen.ts --outfile=pollen.js",
-    "typecheck": "bun run tsgo"
+    "build": "esbuild ./src/pollen.ts --bundle --platform=neutral --target=esnext --outfile=pollen.js --global-name=Pollen",
+    "typecheck": "tsgo"
   },
   "dependencies": {}
 }

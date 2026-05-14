@@ -8,17 +8,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build
+  build-scriptable:
+    name: Build (Scriptable)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "26"
+          cache: "npm"
+          cache-dependency-path: scriptable/package-lock.json
+      - run: npm ci
         working-directory: scriptable
-      - run: bun run build
+      - run: npm run build
         working-directory: scriptable
       - uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "[skip ci] Build 'pollen.js'"
           file_pattern: scriptable/pollen.js
+
+  build-xbar:
+    name: Build (xbar)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "26"
+          cache: "npm"
+          cache-dependency-path: xbar/package-lock.json
+      - run: npm ci
+        working-directory: xbar
+      - run: npm run build
+        working-directory: xbar
+      - uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "[skip ci] Build 'pollen.5m.js'"
+          file_pattern: xbar/pollen.5m.js
