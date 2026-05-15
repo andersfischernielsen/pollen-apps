@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { homedir } from "os";
 import { join } from "path";
 

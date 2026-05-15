@@ -10,7 +10,6 @@
     "typescript": "^6"
   },
   "scripts": {
-    "build": "esbuild pollen.5m.ts --bundle --platform=node --outfile=pollen.5m.js --banner:js=\"#!/usr/bin/env node\" --external:esbuild",
     "typecheck": "tsgo"
   }
 }
